@@ -1,0 +1,86 @@
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hello OpenCV.js</title>
+</head>
+<body>
+<h2>QRCode OpenCV.js</h2>
+<p id="status">OpenCV.js is loading...</p> 
+<input type="button" id="run"  onclick="processVideo()" value="Run" disabled=true />
+<video id="videoInput"> </video> 
+<canvas id="canvasOutput" ></canvas> 
+<p id="result"> </p>
+<script>
+    
+    let video = document.getElementById('videoInput');
+    video.width = 640;
+    video.height = 480;
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    .then(function(stream) {
+        video.srcObject = stream;
+        video.play();
+    })
+    .catch(function(err) {
+        console.log("An error occurred! " + err);
+    });
+   
+
+    const FPS = 26;
+    function processVideo() {
+        let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+        let cap = new cv.VideoCapture(video); 
+
+        try {
+            let begin = Date.now();
+            cap.read(src);
+            let points = new cv.Mat();
+            let dst = src.clone();
+            let straight = new cv.Mat(video.height, video.width, cv.CV_8UC1);
+            let qrCodeDetect = new cv.QRCodeDetector();
+
+            // let decodedInfo = qrCodeDetect.detectAndDecode(src, points, straight);
+            qrCodeDetect.detect(src, points);
+
+            if (!points.empty()) {
+                let decodedInfo = qrCodeDetect.decode(src, points, straight);
+                document.getElementById('result').innerHTML = decodedInfo;
+            
+
+                for (let i = 0; i < 8; i+=2) {
+                    cv.line(dst, new cv.Point(points.data32F[i%8], points.data32F[(i+1)%8]), 
+                                new cv.Point(points.data32F[(i+2)%8], points.data32F[(i+3)%8]),
+                                new cv.Scalar(0, 0, 255, 255), 5);
+                                    console.log(3)
+                }
+            } else {
+                document.getElementById("result").innerHTML = "QR-code not detected";
+            }
+            cv.imshow('canvasOutput', dst);
+
+            src.delete();
+            dst.delete();
+            points.delete();
+            straight.delete();
+            qrCodeDetect.delete();
+            let delay = 1000/FPS - (Date.now() - begin);
+            setTimeout(processVideo, delay);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // schedule the first one.
+    setTimeout(processVideo, 0);
+  
+    function onOpenCvReady() {
+        document.getElementById('status').innerHTML = 'OpenCV.js is load.';
+        cv["onRuntimeInitialized"]=()=> {
+        document.getElementById("run").disabled=false;
+        }
+    }
+
+</script>
+<script async src="opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+
+</body>
+</html>

@@ -6,26 +6,44 @@
 <body>
 <h2>QRCode OpenCV.js</h2>
 <p id="status">OpenCV.js is loading...</p> 
+<input type="file" id="fileInput" name="file" />
+<img id="imageSrc" alt="No Image" />
 <input type="button" id="run"  onclick="qrDetect()" value="Run" disabled=true />
-<img id="imageSrc" src="qr_img.png"/> 
 <canvas id="canvasOutput" ></canvas> 
-
+<p id="result"></p>
 <script>
+
+    let imgElement = document.getElementById('imageSrc');
+    let inputElement = document.getElementById('fileInput');
+    
+    inputElement.onchange = function() {
+      imgElement.src = URL.createObjectURL(event.target.files[0]);
+    };
 
     function qrDetect() {
       let src = cv.imread('imageSrc');
       let points = new cv.Mat();
+      let straight = new cv.Mat();
       let qrCodeDetect = new cv.QRCodeDetector();
       qrCodeDetect.detect(src, points);
+      if (!points.empty()) {
+        let decodedInfo = qrCodeDetect.decode(src, points, straight);
+        document.getElementById("result").innerHTML = decodedInfo;
 
-      for (let i = 0; i < 8; i+=2) {
-        cv.line(src, new cv.Point(points.data32F[i%8], points.data32F[(i+1)%8]), 
-                     new cv.Point(points.data32F[(i+2)%8], points.data32F[(i+3)%8]),
-                     new cv.Scalar(0, 0, 255, 255), 5);
+        for (let i = 0; i < 8; i+=2) {
+          cv.line(src, new cv.Point(points.data32F[i%8], points.data32F[(i+1)%8]), 
+                       new cv.Point(points.data32F[(i+2)%8], points.data32F[(i+3)%8]),
+                       new cv.Scalar(0, 0, 255, 255), 5);
+        }
+      } else {
+        document.getElementById("result").innerHTML = "QR-code not detected";
       }
 
       cv.imshow('canvasOutput',src);
-      src.delete(); 
+      src.delete();
+      points.delete();
+      straight.delete();
+      qrCodeDetect.delete();
     }
   
   function onOpenCvReady() {
